@@ -11,12 +11,16 @@ const FALLBACK = process.env.GEMINI_FALLBACK_MODEL || "";
 const PASS = process.env.APP_PASSWORD || "";
 const WALLET_URL = (process.env.WALLET_URL || "").replace(/\/$/, "");
 const ASSISTANT_KEY = process.env.ASSISTANT_KEY || "";
+const MATRIX_URL = (process.env.MATRIX_URL || "").replace(/\/$/, "");
+const MATRIX_KEY = process.env.MATRIX_KEY || "";
 
 const SYSTEM =
   "তুমি আমার ব্যক্তিগত এআই অ্যাসিস্ট্যান্ট। সবসময় সহজ, বন্ধুত্বপূর্ণ বাংলায় উত্তর দাও। উত্তর ছোট ও কাজের মতো রাখো। " +
-  "আমার ব্যবসার ডিপোজিট, ব্যালেন্স, পেন্ডিং বা সাইটের (rsgallery = RS Gallery, rsmatrix = RS Growth Matrix) হিসাব জানতে চাইলে get_wallet_summary টুল ব্যবহার করো, নিজে সংখ্যা বানাবে না। " +
-  "approved মানে অনুমোদিত/সফল, pending মানে অপেক্ষমাণ, rejected মানে বাতিল। টাকার অঙ্ক টাকায় বলো। " +
-  "টুলে যা নেই (যেমন ইউজারের উইথড্র রিকোয়েস্ট) তা না থাকার কথা সৎভাবে বলো। না জানলে সৎভাবে বলো।";
+  "আমার তিনটা সাইট: RS Gallery (পোশাকের শপ), RS Wallet (পেমেন্ট খাতা, যেখানে সাইটগুলোর ডিপোজিট জমা হয়), RS Growth Matrix (টাস্কভিত্তিক সাইট)। " +
+  "Wallet-এর ব্যালেন্স, জমা-খরচ, পেন্ডিং ডিপোজিট বা rsgallery/rsmatrix সাইটভিত্তিক ডিপোজিট জানতে চাইলে get_wallet_summary টুল ব্যবহার করো। " +
+  "RS Growth Matrix-এর ইউজার সংখ্যা, উইথড্র রিকোয়েস্ট, ডিপোজিট রিকোয়েস্ট, টাস্কের অবস্থা বা মোট ইউজার ব্যালেন্স জানতে চাইলে get_matrix_summary টুল ব্যবহার করো। " +
+  "সংখ্যা নিজে বানাবে না, সবসময় টুল থেকে আনো। approved মানে অনুমোদিত/সফল, pending মানে অপেক্ষমাণ, rejected মানে বাতিল। টাকার অঙ্ক টাকায় বলো। " +
+  "টুলে যা নেই তা না থাকার কথা সৎভাবে বলো। না জানলে সৎভাবে বলো।";
 
 const TOOLS = [
   {
@@ -26,6 +30,11 @@ const TOOLS = [
         description:
           "RS Wallet থেকে বর্তমান ব্যালেন্স, মোট ও আজকের জমা-খরচ, পেন্ডিং ডিপোজিট এবং প্রতিটি সাইটের (rsgallery, rsmatrix) আজকের ও সব সময়ের ডিপোজিটের সংখ্যা ও পরিমাণ আনে।",
       },
+      {
+        name: "get_matrix_summary",
+        description:
+          "RS Growth Matrix থেকে মোট/আজকের সক্রিয়/নতুন ইউজার, পেন্ডিং উইথড্র ও ডিপোজিট রিকোয়েস্ট (সংখ্যা, পরিমাণ, তালিকা), টাস্কের Pending/Success/Cancelled সংখ্যা, অপেক্ষমাণ প্রমোশন টাস্ক, মোট ইউজার ব্যালেন্স এবং আজকের অফার ইনকাম আনে।",
+      },
     ],
   },
 ];
@@ -34,15 +43,21 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getWalletSummary() {
-  if (!WALLET_URL || !ASSISTANT_KEY) {
-    return { error: "Wallet-এর সংযোগ সেট করা নেই" };
+async function fetchSummary(baseUrl, key) {
+  if (!baseUrl || !key) {
+    return { error: "এই সাইটের সংযোগ সেট করা নেই" };
   }
-  const r = await fetch(WALLET_URL + "/api/assistant/summary", {
-    headers: { "x-assistant-key": ASSISTANT_KEY },
+  const r = await fetch(baseUrl + "/api/assistant/summary", {
+    headers: { "x-assistant-key": key },
     signal: AbortSignal.timeout(60000),
   });
   return await r.json();
+}
+
+async function runTool(name) {
+  if (name === "get_wallet_summary") return await fetchSummary(WALLET_URL, ASSISTANT_KEY);
+  if (name === "get_matrix_summary") return await fetchSummary(MATRIX_URL, MATRIX_KEY);
+  return { error: "অজানা টুল" };
 }
 
 let useThinkingCfg = true;
@@ -145,14 +160,10 @@ app.post("/api/chat", async (req, res) => {
       for (const c of calls) {
         let result;
         try {
-          if (c.functionCall.name === "get_wallet_summary") {
-            result = await getWalletSummary();
-          } else {
-            result = { error: "অজানা টুল" };
-          }
+          result = await runTool(c.functionCall.name);
         } catch (e) {
-          console.error("Wallet ত্রুটি:", e.message);
-          result = { error: "Wallet-এ পৌঁছানো যায়নি" };
+          console.error("টুল ত্রুটি:", c.functionCall.name, e.message);
+          result = { error: "সাইটে পৌঁছানো যায়নি (সার্ভার ঘুমিয়ে থাকতে পারে, একটু পরে আবার চেষ্টা করুন)" };
         }
         responses.push({
           functionResponse: { name: c.functionCall.name, response: { result } },
