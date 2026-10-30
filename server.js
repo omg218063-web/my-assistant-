@@ -6,7 +6,8 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const KEY = process.env.GEMINI_API_KEY;
-const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const FALLBACK = process.env.GEMINI_FALLBACK_MODEL || "";
 const PASS = process.env.APP_PASSWORD || "";
 const WALLET_URL = (process.env.WALLET_URL || "").replace(/\/$/, "");
 const ASSISTANT_KEY = process.env.ASSISTANT_KEY || "";
@@ -29,6 +30,10 @@ const TOOLS = [
   },
 ];
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getWalletSummary() {
   if (!WALLET_URL || !ASSISTANT_KEY) {
     return { error: "Wallet-এর সংযোগ সেট করা নেই" };
@@ -40,33 +45,69 @@ async function getWalletSummary() {
   return await r.json();
 }
 
+let useThinkingCfg = true;
+
 async function callGemini(contents) {
-  const r = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
-        contents,
-        tools: TOOLS,
-      }),
-      signal: AbortSignal.timeout(90000),
+  let lastErr = "Gemini-তে সমস্যা হয়েছে";
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const model = attempt === 3 && FALLBACK ? FALLBACK : MODEL;
+    const body = {
+      systemInstruction: { parts: [{ text: SYSTEM }] },
+      contents,
+      tools: TOOLS,
+    };
+    if (useThinkingCfg) {
+      body.generationConfig = { thinkingConfig: { thinkingLevel: "low" } };
     }
-  );
-  const data = await r.json();
-  if (!r.ok) {
-    console.error("Gemini ত্রুটি:", r.status, JSON.stringify(data).slice(0, 500));
-    throw new Error((data.error && data.error.message) || "Gemini-তে সমস্যা হয়েছে");
+
+    try {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(30000),
+        }
+      );
+      const data = await r.json();
+      if (r.ok) return data;
+
+      const msg = (data.error && data.error.message) || "";
+      console.error("Gemini ত্রুটি:", r.status, model, msg.slice(0, 300));
+      lastErr = msg || lastErr;
+
+      if (r.status === 400 && useThinkingCfg && /thinking/i.test(msg)) {
+        useThinkingCfg = false;
+        continue;
+      }
+      if (r.status === 429 || r.status === 500 || r.status === 503) {
+        await sleep(1500 * attempt);
+        continue;
+      }
+      throw new Error(lastErr);
+    } catch (e) {
+      if (e.name === "TimeoutError" || e.name === "AbortError") {
+        console.error("Gemini timeout, চেষ্টা", attempt);
+        lastErr = "Gemini সময়মতো উত্তর দেয়নি";
+        continue;
+      }
+      throw e;
+    }
   }
-  return data;
+  throw new Error(lastErr + " (তিনবার চেষ্টা করা হয়েছে, একটু পরে আবার পাঠান)");
 }
 
 // পরীক্ষার পেজ: /test?p=আপনার_পাসওয়ার্ড
 app.get("/test", async (req, res) => {
-  if (PASS && req.query.p !== PASS) return res.status(401).send("পাসওয়ার্ড লাগবে: /test?p=...");
+  if (PASS && req.query.p !== PASS) {
+    return res.status(401).send("পাসওয়ার্ড লাগবে: /test?p=...");
+  }
   try {
-    const d = await callGemini([{ role: "user", parts: [{ text: "শুধু বলো: কাজ করছে" }] }]);
+    const d = await callGemini([
+      { role: "user", parts: [{ text: "শুধু বলো: কাজ করছে" }] },
+    ]);
     res.type("text/plain").send(JSON.stringify(d, null, 2).slice(0, 2000));
   } catch (e) {
     res.type("text/plain").send("ত্রুটি: " + e.message);
