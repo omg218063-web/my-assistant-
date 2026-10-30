@@ -6,7 +6,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const KEY = process.env.GEMINI_API_KEY;
-const MODEL = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+const MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 const FALLBACK = process.env.GEMINI_FALLBACK_MODEL || "";
 const PASS = process.env.APP_PASSWORD || "";
 const WALLET_URL = (process.env.WALLET_URL || "").replace(/\/$/, "");
@@ -49,9 +49,10 @@ let useThinkingCfg = true;
 
 async function callGemini(contents) {
   let lastErr = "Gemini-তে সমস্যা হয়েছে";
+  const order = FALLBACK ? [MODEL, FALLBACK, MODEL, FALLBACK] : [MODEL, MODEL, MODEL];
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const model = attempt === 3 && FALLBACK ? FALLBACK : MODEL;
+  for (let attempt = 0; attempt < order.length; attempt++) {
+    const model = order[attempt];
     const body = {
       systemInstruction: { parts: [{ text: SYSTEM }] },
       contents,
@@ -68,7 +69,7 @@ async function callGemini(contents) {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-goog-api-key": KEY },
           body: JSON.stringify(body),
-          signal: AbortSignal.timeout(30000),
+          signal: AbortSignal.timeout(15000),
         }
       );
       const data = await r.json();
@@ -80,23 +81,24 @@ async function callGemini(contents) {
 
       if (r.status === 400 && useThinkingCfg && /thinking/i.test(msg)) {
         useThinkingCfg = false;
+        attempt--;
         continue;
       }
-      if (r.status === 429 || r.status === 500 || r.status === 503) {
-        await sleep(1500 * attempt);
+      if (r.status === 429 || r.status === 500 || r.status === 503 || r.status === 404) {
+        await sleep(800);
         continue;
       }
       throw new Error(lastErr);
     } catch (e) {
       if (e.name === "TimeoutError" || e.name === "AbortError") {
-        console.error("Gemini timeout, চেষ্টা", attempt);
+        console.error("Gemini timeout:", model);
         lastErr = "Gemini সময়মতো উত্তর দেয়নি";
         continue;
       }
       throw e;
     }
   }
-  throw new Error(lastErr + " (তিনবার চেষ্টা করা হয়েছে, একটু পরে আবার পাঠান)");
+  throw new Error(lastErr + " (একটু পরে আবার পাঠান)");
 }
 
 // পরীক্ষার পেজ: /test?p=আপনার_পাসওয়ার্ড
