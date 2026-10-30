@@ -51,7 +51,7 @@ async function callGemini(contents) {
         contents,
         tools: TOOLS,
       }),
-      signal: AbortSignal.timeout(45000),
+      signal: AbortSignal.timeout(90000),
     }
   );
   const data = await r.json();
