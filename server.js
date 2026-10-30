@@ -35,6 +35,7 @@ async function getWalletSummary() {
   }
   const r = await fetch(WALLET_URL + "/api/assistant/summary", {
     headers: { "x-assistant-key": ASSISTANT_KEY },
+    signal: AbortSignal.timeout(60000),
   });
   return await r.json();
 }
@@ -50,14 +51,27 @@ async function callGemini(contents) {
         contents,
         tools: TOOLS,
       }),
+      signal: AbortSignal.timeout(45000),
     }
   );
   const data = await r.json();
   if (!r.ok) {
-    throw new Error((data.error && data.error.message) || "সমস্যা হয়েছে");
+    console.error("Gemini ত্রুটি:", r.status, JSON.stringify(data).slice(0, 500));
+    throw new Error((data.error && data.error.message) || "Gemini-তে সমস্যা হয়েছে");
   }
   return data;
 }
+
+// পরীক্ষার পেজ: /test?p=আপনার_পাসওয়ার্ড
+app.get("/test", async (req, res) => {
+  if (PASS && req.query.p !== PASS) return res.status(401).send("পাসওয়ার্ড লাগবে: /test?p=...");
+  try {
+    const d = await callGemini([{ role: "user", parts: [{ text: "শুধু বলো: কাজ করছে" }] }]);
+    res.type("text/plain").send(JSON.stringify(d, null, 2).slice(0, 2000));
+  } catch (e) {
+    res.type("text/plain").send("ত্রুটি: " + e.message);
+  }
+});
 
 app.post("/api/chat", async (req, res) => {
   try {
@@ -94,6 +108,7 @@ app.post("/api/chat", async (req, res) => {
             result = { error: "অজানা টুল" };
           }
         } catch (e) {
+          console.error("Wallet ত্রুটি:", e.message);
           result = { error: "Wallet-এ পৌঁছানো যায়নি" };
         }
         responses.push({
@@ -104,6 +119,7 @@ app.post("/api/chat", async (req, res) => {
     }
     res.json({ reply: "দুঃখিত, উত্তর তৈরি করতে পারিনি। আবার চেষ্টা করুন।" });
   } catch (e) {
+    console.error("চ্যাট ত্রুটি:", e.message);
     res.status(500).json({ error: e.message });
   }
 });
