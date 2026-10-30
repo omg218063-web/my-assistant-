@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>আমার অ্যাসিস্ট্যান্ট</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; font-family: sans-serif; background: #0f172a; color: #e2e8f0; }
+  #app { display: flex; flex-direction: column; height: 100%; }
+  header { padding: 12px; background: #1e293b; font-weight: bold; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  header div { display: flex; gap: 6px; }
+  header button { background: none; border: 1px solid #475569; color: #e2e8f0; border-radius: 8px; padding: 6px 10px; font-size: 13px; }
+  header button.active { background: #16a34a; border-color: #16a34a; }
+  #chat { flex: 1; overflow-y: auto; padding: 12px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; margin: 8px 0; white-space: pre-wrap; line-height: 1.5; }
+  .user { background: #2563eb; margin-left: auto; }
+  .bot { background: #1e293b; }
+  #bar { display: flex; gap: 8px; padding: 10px; background: #1e293b; padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #input { flex: 1; padding: 12px; border-radius: 12px; border: none; background: #0f172a; color: #e2e8f0; font-size: 16px; }
+  #bar button { border: none; border-radius: 12px; padding: 0 16px; font-size: 18px; background: #2563eb; color: white; }
+  #mic.on { background: #dc2626; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span>🤖 অ্যাসিস্ট্যান্ট</span>
+    <div>
+      <button id="voice">🗣️ ভয়েস: বন্ধ</button>
+      <button id="clear">নতুন চ্যাট</button>
+    </div>
+  </header>
+  <div id="chat"></div>
+  <div id="bar">
+    <button id="mic">🎤</button>
+    <input id="input" placeholder="এখানে লিখুন..." autocomplete="off">
+    <button id="send">➤</button>
+  </div>
+</div>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const mic = document.getElementById("mic");
+const voiceBtn = document.getElementById("voice");
+
+let history = [];
+try { history = JSON.parse(localStorage.getItem("history") || "[]"); } catch (e) {}
+
+let voiceOn = false;
+let rec = null;
+
+function save() {
+  try { localStorage.setItem("history", JSON.stringify(history.slice(-60))); } catch (e) {}
+}
+
+function add(role, text) {
+  const d = document.createElement("div");
+  d.className = "msg " + (role === "user" ? "user" : "bot");
+  d.textContent = text;
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+  return d;
+}
+
+history.forEach((m) => add(m.role, m.text));
+
+function speak(text, done) {
+  if (!window.speechSynthesis) { if (done) done(); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
+  u.lang = "bn-BD";
+  u.onend = function () { if (done) done(); };
+  u.onerror = function () { if (done) done(); };
+  window.speechSynthesis.speak(u);
+}
+
+function listen() {
+  if (!rec) return;
+  try {
+    mic.classList.add("on");
+    rec.start();
+  } catch (e) {
+    mic.classList.remove("on");
+  }
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = "";
+  add("user", text);
+  history.push({ role: "user", text });
+  const wait = add("bot", "ভাবছি...");
+
+  let pass = "";
+  try { pass = localStorage.getItem("pass") || ""; } catch (e) {}
+
+  try {
+    const r = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-app-password": pass },
+      body: JSON.stringify({ messages: history }),
+    });
+    const data = await r.json();
+    if (r.status === 401) {
+      const p = prompt("পাসওয়ার্ড দিন:");
+      try { localStorage.setItem("pass", p || ""); } catch (e) {}
+      wait.textContent = "পাসওয়ার্ড দিয়েছেন, আবার পাঠান।";
+      history.pop();
+      save();
+      return;
+    }
+    if (data.error) {
+      wait.textContent = "ত্রুটি: " + data.error;
+      history.pop();
+    } else {
+      wait.textContent = data.reply;
+      history.push({ role: "model", text: data.reply });
+      if (voiceOn) {
+        speak(data.reply, function () { if (voiceOn) listen(); });
+      }
+    }
+  } catch (e) {
+    wait.textContent = "ইন্টারনেট বা সার্ভারে সমস্যা।";
+    history.pop();
+  }
+  save();
+}
+
+document.getElementById("send").onclick = send;
+input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+
+document.getElementById("clear").onclick = () => {
+  history = [];
+  save();
+  chat.innerHTML = "";
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+};
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) {
+  mic.style.display = "none";
+  voiceBtn.style.display = "none";
+} else {
+  rec = new SR();
+  rec.lang = "bn-BD";
+  rec.onresult = (e) => { input.value = e.results[0][0].transcript; send(); };
+  rec.onend = () => mic.classList.remove("on");
+  mic.onclick = () => {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    listen();
+  };
+}
+
+voiceBtn.onclick = () => {
+  voiceOn = !voiceOn;
+  voiceBtn.textContent = voiceOn ? "🗣️ ভয়েস: চালু" : "🗣️ ভয়েস: বন্ধ";
+  voiceBtn.classList.toggle("active", voiceOn);
+  if (voiceOn) {
+    listen();
+  } else {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    try { rec.stop(); } catch (e) {}
+  }
+};
+</script>
+</body>
+                   </html>
