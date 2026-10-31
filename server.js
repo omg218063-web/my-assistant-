@@ -13,12 +13,17 @@ const WALLET_URL = (process.env.WALLET_URL || "").replace(/\/$/, "");
 const ASSISTANT_KEY = process.env.ASSISTANT_KEY || "";
 const MATRIX_URL = (process.env.MATRIX_URL || "").replace(/\/$/, "");
 const MATRIX_KEY = process.env.MATRIX_KEY || "";
+const GALLERY_URL = (process.env.GALLERY_URL || "").replace(/\/$/, "");
+const GALLERY_KEY = process.env.GALLERY_KEY || "";
 
 const SYSTEM =
   "তুমি আমার ব্যক্তিগত এআই অ্যাসিস্ট্যান্ট। সবসময় সহজ, বন্ধুত্বপূর্ণ বাংলায় উত্তর দাও। উত্তর ছোট ও কাজের মতো রাখো। " +
-  "আমার তিনটা সাইট: RS Gallery (পোশাকের শপ), RS Wallet (পেমেন্ট খাতা, যেখানে সাইটগুলোর ডিপোজিট জমা হয়), RS Growth Matrix (টাস্কভিত্তিক সাইট)। " +
-  "Wallet-এর ব্যালেন্স, জমা-খরচ, পেন্ডিং ডিপোজিট বা rsgallery/rsmatrix সাইটভিত্তিক ডিপোজিট জানতে চাইলে get_wallet_summary টুল ব্যবহার করো। " +
-  "RS Growth Matrix-এর ইউজার সংখ্যা, উইথড্র রিকোয়েস্ট, ডিপোজিট রিকোয়েস্ট, টাস্কের অবস্থা বা মোট ইউজার ব্যালেন্স জানতে চাইলে get_matrix_summary টুল ব্যবহার করো। " +
+  "আমার তিনটা সাইট: RS Gallery (পোশাকের অনলাইন শপ), RS Wallet (পেমেন্ট খাতা, যেখানে সাইটগুলোর ডিপোজিট জমা হয়), RS Growth Matrix (টাস্কভিত্তিক সাইট)। " +
+  "Wallet-এর ব্যালেন্স, জমা-খরচ, পেন্ডিং ডিপোজিট বা সাইটভিত্তিক ডিপোজিট জানতে চাইলে get_wallet_summary ব্যবহার করো। " +
+  "RS Growth Matrix-এর ইউজার সংখ্যা, উইথড্র ও ডিপোজিট রিকোয়েস্ট, টাস্কের Pending/Success/Cancelled সংখ্যা বা মোট ইউজার ব্যালেন্স জানতে চাইলে get_matrix_summary ব্যবহার করো। " +
+  "RS Gallery-র প্রোডাক্ট সংখ্যা, বিক্রি, অর্ডার ও অর্ডারের ধাপ, কাস্টমার সংখ্যা, ভিজিটর বা লাভ জানতে চাইলে get_gallery_summary ব্যবহার করো। " +
+  "RS Gallery-তে কাস্টমার মানে ফোন নম্বর ধরে আলাদা আলাদা অর্ডারকারী। প্রোডাক্টের নিজস্ব কোনো ধাপ নেই, অর্ডারের ধাপ আছে (New, Delivered, Returned, Cancelled, Failed বা অন্য যা যা দেখা যায়), সেটাই বলো। " +
+  "সব সাইট ঠিকঠাক চলছে কি না জানতে চাইলে get_sites_health ব্যবহার করো। ঘুমিয়ে থাকা সাইট জাগতে ৩০-৫০ সেকেন্ড লাগে, এটা সমস্যা নয়, এভাবে জানিয়ে দাও। " +
   "সংখ্যা নিজে বানাবে না, সবসময় টুল থেকে আনো। approved মানে অনুমোদিত/সফল, pending মানে অপেক্ষমাণ, rejected মানে বাতিল। টাকার অঙ্ক টাকায় বলো। " +
   "টুলে যা নেই তা না থাকার কথা সৎভাবে বলো। না জানলে সৎভাবে বলো।";
 
@@ -34,6 +39,16 @@ const TOOLS = [
         name: "get_matrix_summary",
         description:
           "RS Growth Matrix থেকে মোট/আজকের সক্রিয়/নতুন ইউজার, পেন্ডিং উইথড্র ও ডিপোজিট রিকোয়েস্ট (সংখ্যা, পরিমাণ, তালিকা), টাস্কের Pending/Success/Cancelled সংখ্যা, অপেক্ষমাণ প্রমোশন টাস্ক, মোট ইউজার ব্যালেন্স এবং আজকের অফার ইনকাম আনে।",
+      },
+      {
+        name: "get_gallery_summary",
+        description:
+          "RS Gallery থেকে মোট প্রোডাক্ট সংখ্যা, মোট বিক্রিত পিস, সবচেয়ে বেশি বিক্রিত ৫টা প্রোডাক্ট, মোট ও আজকের অর্ডার ও বিক্রি, অর্ডারের ধাপভিত্তিক সংখ্যা (New, Delivered, Returned, Cancelled ইত্যাদি), অগ্রিম ডেলিভারি চার্জ, লাভ, সাম্প্রতিক ৫টা অর্ডার, মোট ও পুনরায় কেনা কাস্টমার এবং আজকের ভিজিটর আনে।",
+      },
+      {
+        name: "get_sites_health",
+        description:
+          "RS Wallet, RS Growth Matrix ও RS Gallery এই তিনটা সাইট এই মুহূর্তে চালু আছে কি না এবং সাড়া দিতে কত সময় নিচ্ছে তা পরীক্ষা করে।",
       },
     ],
   },
@@ -54,9 +69,38 @@ async function fetchSummary(baseUrl, key) {
   return await r.json();
 }
 
+async function checkSite(name, url, pathPart) {
+  if (!url) return { site: name, ok: false, note: "লিংক সেট করা নেই" };
+  const t0 = Date.now();
+  try {
+    const r = await fetch(url + pathPart, { signal: AbortSignal.timeout(55000) });
+    const ms = Date.now() - t0;
+    return {
+      site: name,
+      ok: r.ok,
+      httpStatus: r.status,
+      responseSeconds: Math.round(ms / 100) / 10,
+      note: ms > 8000 ? "ঘুমিয়ে ছিল, এখন জেগেছে" : "ঠিকঠাক সাড়া দিচ্ছে",
+    };
+  } catch (e) {
+    return { site: name, ok: false, note: "সাড়া দেয়নি" };
+  }
+}
+
+async function getSitesHealth() {
+  const sites = await Promise.all([
+    checkSite("RS Wallet", WALLET_URL, "/health"),
+    checkSite("RS Growth Matrix", MATRIX_URL, "/ping"),
+    checkSite("RS Gallery", GALLERY_URL, "/"),
+  ]);
+  return { sites: sites };
+}
+
 async function runTool(name) {
   if (name === "get_wallet_summary") return await fetchSummary(WALLET_URL, ASSISTANT_KEY);
   if (name === "get_matrix_summary") return await fetchSummary(MATRIX_URL, MATRIX_KEY);
+  if (name === "get_gallery_summary") return await fetchSummary(GALLERY_URL, GALLERY_KEY);
+  if (name === "get_sites_health") return await getSitesHealth();
   return { error: "অজানা টুল" };
 }
 
@@ -156,19 +200,20 @@ app.post("/api/chat", async (req, res) => {
       }
 
       contents.push(content);
-      const responses = [];
-      for (const c of calls) {
-        let result;
-        try {
-          result = await runTool(c.functionCall.name);
-        } catch (e) {
-          console.error("টুল ত্রুটি:", c.functionCall.name, e.message);
-          result = { error: "সাইটে পৌঁছানো যায়নি (সার্ভার ঘুমিয়ে থাকতে পারে, একটু পরে আবার চেষ্টা করুন)" };
-        }
-        responses.push({
-          functionResponse: { name: c.functionCall.name, response: { result } },
-        });
-      }
+      const responses = await Promise.all(
+        calls.map(async (c) => {
+          let result;
+          try {
+            result = await runTool(c.functionCall.name);
+          } catch (e) {
+            console.error("টুল ত্রুটি:", c.functionCall.name, e.message);
+            result = { error: "সাইটে পৌঁছানো যায়নি (সার্ভার ঘুমিয়ে থাকতে পারে, একটু পরে আবার চেষ্টা করুন)" };
+          }
+          return {
+            functionResponse: { name: c.functionCall.name, response: { result } },
+          };
+        })
+      );
       contents.push({ role: "user", parts: responses });
     }
     res.json({ reply: "দুঃখিত, উত্তর তৈরি করতে পারিনি। আবার চেষ্টা করুন।" });
