@@ -160,7 +160,7 @@ let useThinkingCfg = true;
 
 async function callGemini(contents) {
   let lastErr = "Gemini-তে সমস্যা হয়েছে";
-  const order = FALLBACK ? [MODEL, FALLBACK, MODEL, FALLBACK] : [MODEL, MODEL, MODEL];
+    const order = FALLBACK ? [MODEL, FALLBACK, MODEL, FALLBACK, MODEL, FALLBACK] : [MODEL, MODEL, MODEL, MODEL, MODEL];
 
   for (let attempt = 0; attempt < order.length; attempt++) {
     const model = order[attempt];
@@ -196,7 +196,7 @@ async function callGemini(contents) {
         continue;
       }
       if (r.status === 429 || r.status === 500 || r.status === 503 || r.status === 404) {
-        await sleep(800);
+        await sleep(2500);
         continue;
       }
       throw new Error(lastErr);
