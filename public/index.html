@@ -55,17 +55,32 @@
   #chat { flex: 1; overflow-y: auto; padding: 14px 14px 6px; scroll-behavior: smooth; }
   #chat::-webkit-scrollbar { width: 0; }
 
-  .row { display: flex; gap: 10px; margin: 14px 0; align-items: flex-start; animation: rise .4s ease both; }
+  .row { --ac: 246,200,90; display: flex; gap: 10px; margin: 14px 0; align-items: flex-start; animation: rise .4s ease both; }
   .row.user { justify-content: flex-end; }
   @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .av { width: 30px; height: 30px; flex: none; border-radius: 10px; text-align: center;
-    background: linear-gradient(135deg, var(--g1), var(--g2)); color: #1a1204; font: 800 12px/30px sans-serif; }
-  .bubble { max-width: 82%; padding: 12px 15px; border-radius: 18px; line-height: 1.65; font-size: 15.5px;
+    background: linear-gradient(135deg, rgb(var(--ac)), rgba(var(--ac),.6)); color: #1a1204; font: 800 12px/30px sans-serif; box-shadow: 0 0 14px rgba(var(--ac),.4); }
+  .col { display: flex; flex-direction: column; gap: 9px; max-width: 88%; min-width: 0; }
+  .row.user .col { align-items: flex-end; }
+  .bubble { padding: 12px 15px; border-radius: 18px; line-height: 1.7; font-size: 15.5px;
     white-space: pre-wrap; word-wrap: break-word; }
-  .user .bubble { background: linear-gradient(135deg, #f6d98a, #d4a23a); color: #1b1405; font-weight: 500; border-bottom-right-radius: 6px; }
-  .bot .bubble { background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(12px); border-top-left-radius: 6px; }
-  .bot .bubble.err { border-color: rgba(248,113,113,.5); color: #fecaca; }
-  .bubble b { color: var(--g1); }
+  .user .bubble { background: linear-gradient(135deg, rgb(var(--ac)), rgba(var(--ac),.72)); color: #150f02; font-weight: 600; border-bottom-right-radius: 6px; }
+  .bot .bubble { background: linear-gradient(135deg, rgba(var(--ac),.17), rgba(255,255,255,.04));
+    border: 1px solid rgba(var(--ac),.5); box-shadow: 0 0 22px rgba(var(--ac),.14);
+    backdrop-filter: blur(12px); border-top-left-radius: 6px; }
+  .bot .bubble.err { border-color: rgba(248,113,113,.6); color: #fecaca; }
+  .bubble b { color: rgb(var(--ac)); }
+  .bot .bubble b { text-shadow: 0 0 10px rgba(var(--ac),.45); }
+
+  .amt { color: #ff4d5e; font-weight: 800; white-space: nowrap;
+    text-shadow: 0 0 8px rgba(255,60,80,.9), 0 0 18px rgba(255,60,80,.55); animation: redglow 1.8s ease-in-out infinite alternate; }
+  @keyframes redglow {
+    from { text-shadow: 0 0 5px rgba(255,60,80,.6), 0 0 10px rgba(255,60,80,.3); }
+    to { text-shadow: 0 0 10px rgba(255,60,80,1), 0 0 24px rgba(255,60,80,.7); }
+  }
+  .kw-w { color: #ffc24d; font-weight: 700; }
+  .kw-g { color: #4ade80; font-weight: 700; }
+  .kw-r { color: #ff7a8a; font-weight: 700; }
 
   .typing { display: flex; align-items: center; gap: 10px; }
   .typing .dots { display: flex; gap: 5px; }
@@ -77,26 +92,53 @@
     -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; animation: shimmer 1.6s linear infinite; }
   @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
-  #welcome { text-align: center; padding: 26px 6px 10px; animation: rise .6s ease both; }
-  #welcome .big { display: flex; justify-content: center; margin-bottom: 14px; }
-  #welcome h1 { margin: 0; font-size: 26px; }
-  #welcome p { color: var(--muted); margin: 8px 0 22px; font-size: 14.5px; }
-  .cards { display: grid; gap: 11px; text-align: left; }
-  .card { display: flex; align-items: center; gap: 14px; padding: 15px; border-radius: 18px; cursor: pointer;
-    background: var(--glass); border: 1px solid var(--line); color: var(--text); font-family: inherit; width: 100%;
-    transition: transform .15s, border-color .3s, box-shadow .3s; }
-  .card:active { transform: scale(.98); }
-  .card:hover { border-color: rgba(246,217,138,.5); box-shadow: 0 0 22px rgba(200,146,31,.18); }
-  .card .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px;
-    background: linear-gradient(135deg, rgba(246,217,138,.2), rgba(91,61,245,.2)); border: 1px solid var(--line); flex: none; }
-  .card .nm { font-weight: 700; font-size: 15.5px; }
-  .card .ds { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
-  .card .ar { margin-left: auto; color: var(--g1); font-size: 18px; }
+  .cards-wrap { display: flex; flex-direction: column; gap: 9px; width: 100%; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 7px; }
+  .sc { background: rgba(var(--ac),.1); border: 1px solid rgba(var(--ac),.4); border-radius: 14px; padding: 9px 6px; text-align: center; }
+  .sc b { display: block; font-size: 17px; color: rgb(var(--ac)); }
+  .sc small { font-size: 10.5px; color: var(--muted); }
+  .sec { font-size: 12px; color: var(--muted); margin: 4px 2px 0; }
+  .src { font-size: 11.5px; color: var(--muted); margin: 0 2px; line-height: 1.6; }
+
+  .ocard { display: flex; gap: 11px; background: rgba(255,255,255,.05); border: 1px solid rgba(var(--ac),.45);
+    border-radius: 16px; padding: 10px; box-shadow: 0 0 16px rgba(var(--ac),.12); }
+  .oimgs { display: flex; flex-direction: column; gap: 6px; flex: none; }
+  .oimgs img { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(var(--ac),.4); background: #111; }
+  .oic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px;
+    background: rgba(var(--ac),.14); border: 1px solid rgba(var(--ac),.4); }
+  .obody { flex: 1; min-width: 0; font-size: 13px; line-height: 1.6; }
+  .otop { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .otop b { color: rgb(var(--ac)); font-size: 14.5px; }
+  .tag { font-size: 10.5px; padding: 2px 9px; border-radius: 999px; font-weight: 700; flex: none; }
+  .st-new { background: rgba(94,205,235,.18); color: #7dd8f0; }
+  .st-ok { background: rgba(74,222,128,.18); color: #4ade80; }
+  .st-bad { background: rgba(255,90,110,.18); color: #ff7a8a; }
+  .st-mid { background: rgba(255,194,77,.18); color: #ffc24d; }
+  .obody a { color: #7dd3fc; text-decoration: none; }
+  .oaddr { color: #cfd3e2; word-wrap: break-word; }
+  .oitem { color: #aeb3c6; font-size: 12px; }
+  .otime { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .risk { color: #ff7a8a; font-size: 11.5px; font-weight: 700; }
 
   #chips { display: flex; gap: 8px; overflow-x: auto; padding: 8px 14px 4px; }
   #chips::-webkit-scrollbar { height: 0; }
   .chip { flex: none; display: flex; align-items: center; gap: 7px; padding: 8px 13px; border-radius: 999px; font-size: 13px; cursor: pointer;
     background: var(--glass); border: 1px solid var(--line); color: var(--text); font-family: inherit; }
+
+  #welcome { text-align: center; padding: 26px 6px 10px; animation: rise .6s ease both; }
+  #welcome .big { display: flex; justify-content: center; margin-bottom: 14px; }
+  #welcome h1 { margin: 0; font-size: 24px; }
+  #welcome p { color: var(--muted); margin: 8px 0 22px; font-size: 14.5px; }
+  .wcards { display: grid; gap: 11px; text-align: left; }
+  .wcard { display: flex; align-items: center; gap: 14px; padding: 15px; border-radius: 18px; cursor: pointer;
+    background: var(--glass); border: 1px solid var(--line); color: var(--text); font-family: inherit; width: 100%;
+    transition: transform .15s, border-color .3s, box-shadow .3s; }
+  .wcard:active { transform: scale(.98); }
+  .wcard .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px;
+    background: linear-gradient(135deg, rgba(246,217,138,.2), rgba(91,61,245,.2)); border: 1px solid var(--line); flex: none; }
+  .wcard .nm { font-weight: 700; font-size: 15.5px; }
+  .wcard .ds { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .wcard .ar { margin-left: auto; color: var(--g1); font-size: 18px; }
 
   #bar { display: flex; align-items: center; gap: 9px; padding: 8px 12px calc(12px + env(safe-area-inset-bottom, 0px)); }
   .field { flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.07); border: 1px solid var(--line);
@@ -148,10 +190,22 @@ const mic = document.getElementById("mic");
 const voiceBtn = document.getElementById("voice");
 const chipsBox = document.getElementById("chips");
 
+const PALETTE = [[246,200,90],[94,205,235],[255,128,170],[90,220,160],[170,140,255],[255,160,90]];
+let msgN = 0;
+
 const SITES = [
-  { name: "RS Gallery", icon: "🛍️", desc: "অর্ডার ও পেমেন্টের অবস্থা", q: "আজ RS Gallery-তে কয়টা ডিপোজিট এসেছে আর তার অবস্থা কী?" },
-  { name: "RS Wallet", icon: "💳", desc: "ব্যালেন্স ও জমা-খরচ", q: "আমার RS Wallet-এর বর্তমান ব্যালেন্স আর আজকের জমা-খরচ কত?" },
-  { name: "RS Growth Matrix", icon: "📈", desc: "ডিপোজিট ও টাস্ক", q: "আজ RS Growth Matrix-এ কয়টা ডিপোজিট এসেছে আর কয়টা পেন্ডিং?" }
+  { name: "RS Gallery", icon: "🛍️", desc: "অর্ডার, ঠিকানা, ভিজিটর ও বিক্রি",
+    label: "🛍️ RS Gallery-র আজকের রিপোর্ট",
+    q: "RS Gallery-র আজকের পূর্ণ রিপোর্ট দাও: আজ কতগুলো অর্ডার এসেছে, কতগুলো নতুন ও কতগুলো চলমান, আজ কতজন ভিজিটর ঢুকেছে ও কোন লিংক থেকে কত ভিজিট, আর সাম্প্রতিক অর্ডারের বিস্তারিত তালিকা দেখাও।" },
+  { name: "RS Wallet", icon: "💳", desc: "ব্যালেন্স ও জমা-খরচ",
+    label: "💳 RS Wallet-এর হিসাব",
+    q: "আমার RS Wallet-এর বর্তমান ব্যালেন্স, আজকের জমা-খরচ আর পেন্ডিং ডিপোজিটের পূর্ণ হিসাব দাও।" },
+  { name: "RS Growth Matrix", icon: "📈", desc: "ডিপোজিট, উইথড্র ও টাস্ক",
+    label: "📈 RS Growth Matrix-এর আজকের রিপোর্ট",
+    q: "RS Growth Matrix-এর আজকের পূর্ণ রিপোর্ট দাও: কয়টা ডিপোজিট ও উইথড্র পেন্ডিং, মোট টাকা কত, ইউজার সংখ্যা, টাস্কের অবস্থা, আর পেন্ডিং ডিপোজিট ও উইথড্রের বিস্তারিত তালিকা দেখাও।" },
+  { name: "সাইটের অবস্থা", icon: "🟢", desc: "সব সাইট ঠিকঠাক চলছে কি না",
+    label: "🟢 সব সাইট ঠিক আছে কি না",
+    q: "আমার তিনটা সাইট কি এখন ঠিকঠাক চলছে? প্রতিটার অবস্থা বলো।" }
 ];
 
 function logo(size, id) {
@@ -173,72 +227,195 @@ let rec = null;
 let busy = false;
 
 function save() {
-  try { localStorage.setItem("history", JSON.stringify(history.slice(-60))); } catch (e) {}
+  try { localStorage.setItem("history", JSON.stringify(history.slice(-40))); } catch (e) {}
 }
 function esc(s) {
-  return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; });
+  return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+  });
 }
-function fmt(s) { return esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>"); }
-function scrollDown() { chat.scrollTop = chat.scrollHeight; }
 
-function removeWelcome() {
-  const w = document.getElementById("welcome");
-  if (w) w.remove();
+var MONEY = /(৳\s?[0-9০-৯][0-9০-৯,.]*|[0-9০-৯][0-9০-৯,.]*\s?(?:টাকা|৳|BDT)|[0-9০-৯]{1,3}(?:,[0-9০-৯]{2,3})+)/g;
+function fmt(s) {
+  var t = esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/^\s*[\*\-]\s+/gm, "• ");
+  t = t.replace(MONEY, '<span class="amt">$1</span>');
+  t = t.replace(/(পেন্ডিং|অপেক্ষমাণ|Pending)/g, '<span class="kw-w">$1</span>')
+       .replace(/(সফল|অনুমোদিত|Delivered)/g, '<span class="kw-g">$1</span>')
+       .replace(/(বাতিল|ত্রুটি|ব্যর্থ|Returned|Cancelled|Failed)/g, '<span class="kw-r">$1</span>');
+  return t;
 }
+function bdt(n) { return '<span class="amt">৳' + Number(n || 0).toLocaleString("en-US") + "</span>"; }
+function fmtTime(t) {
+  try { return new Date(t).toLocaleString("bn-BD", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); }
+  catch (e) { return ""; }
+}
+function safeImg(u) { return /^https:\/\//.test(u || "") ? u : ""; }
+function stClass(st) {
+  if (st === "New") return "st-new";
+  if (st === "Delivered") return "st-ok";
+  if (["Returned", "Cancelled", "Failed"].indexOf(st) >= 0) return "st-bad";
+  return "st-mid";
+}
+function statBox(list) {
+  return '<div class="stats">' + list.map(function (x) {
+    return '<div class="sc"><b>' + x[1] + "</b><small>" + x[0] + "</small></div>";
+  }).join("") + "</div>";
+}
+function node(html) {
+  var d = document.createElement("div");
+  d.innerHTML = html;
+  return d;
+}
+
+function orderCard(o) {
+  var imgs = (o.items || []).slice(0, 3).map(function (i) {
+    var u = safeImg(i.image);
+    return u ? '<img src="' + esc(u) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">' : "";
+  }).join("");
+  var items = (o.items || []).map(function (i) {
+    var extra = [i.size, i.color].filter(Boolean).join("/");
+    return '<div class="oitem">• ' + esc(i.name) + (extra ? " (" + esc(extra) + ")" : "") + " × " + esc(i.qty) + "</div>";
+  }).join("");
+  var adv = o.advance > 0
+    ? ' · অগ্রিম ' + bdt(o.advance) + (o.advanceBkash ? " (" + esc(o.advanceBkash) + (o.advanceTrx ? " · " + esc(o.advanceTrx) : "") + ")" : "")
+    : " · অগ্রিম নেই";
+  return '<div class="ocard">' +
+    (imgs ? '<div class="oimgs">' + imgs + "</div>" : '<div class="oic">📦</div>') +
+    '<div class="obody">' +
+    '<div class="otop"><b>' + esc(o.name) + '</b><span class="tag ' + stClass(o.status) + '">' + esc(o.status) + "</span></div>" +
+    '<div>📞 <a href="tel:' + esc(o.phone) + '">' + esc(o.phone) + "</a></div>" +
+    '<div class="oaddr">📍 ' + esc(o.address) + (o.zone ? " (" + esc(o.zone) + ")" : "") + "</div>" +
+    items +
+    '<div>মোট ' + bdt(o.total) + adv + "</div>" +
+    (o.risky ? '<div class="risk">⚠️ আগে সমস্যা হয়েছে এমন কাস্টমার</div>' : "") +
+    '<div class="otime">#' + esc(o.id) + " · " + fmtTime(o.time) + "</div>" +
+    "</div></div>";
+}
+
+function depositCard(d) {
+  return '<div class="ocard"><div class="oic">💳</div><div class="obody">' +
+    '<div class="otop"><b>' + esc(d.name) + '</b><span class="tag st-mid">' + esc(d.method || "") + "</span></div>" +
+    "<div>টাকা " + bdt(d.amount) + "</div>" +
+    "<div>TrxID: " + esc(d.trxId || "-") + (d.lastDigits ? " · শেষ ৩ অঙ্ক: " + esc(d.lastDigits) : "") + "</div>" +
+    (d["package"] ? '<div class="oitem">📦 ' + esc(d["package"]) + "</div>" : "") +
+    '<div class="otime">' + esc(d.orderNo || "") + " · " + fmtTime(d.time) + "</div>" +
+    "</div></div>";
+}
+
+function withdrawCard(w) {
+  return '<div class="ocard"><div class="oic">💸</div><div class="obody">' +
+    '<div class="otop"><b>' + esc(w.name) + '</b><span class="tag st-mid">' + esc(w.method || "") + "</span></div>" +
+    "<div>টাকা " + bdt(w.amount) + "</div>" +
+    '<div>📞 পাঠাতে হবে: <a href="tel:' + esc(w.number) + '">' + esc(w.number) + "</a></div>" +
+    '<div class="otime">' + fmtTime(w.time) + "</div>" +
+    "</div></div>";
+}
+
+function renderCards(cards) {
+  var wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  (cards || []).forEach(function (c) {
+    var st = c.stats || {};
+    if (c.type === "gallery") {
+      wrap.appendChild(node(statBox([
+        ["আজকের অর্ডার", st.todayOrders == null ? "-" : st.todayOrders],
+        ["আজ নতুন", st.newToday == null ? "-" : st.newToday],
+        ["চলমান", st.active == null ? "-" : st.active],
+        ["আজকের ভিজিটর", st.visitors == null ? "-" : st.visitors],
+        ["মোট অর্ডার", st.totalOrders == null ? "-" : st.totalOrders]
+      ])));
+      if (st.sources && st.sources.length) {
+        wrap.appendChild(node('<div class="src">🔗 লিংকভিত্তিক মোট ভিজিট (সব সময়ের): ' +
+          st.sources.slice(0, 6).map(function (x) { return esc(x.source) + " " + esc(x.totalVisits); }).join(" · ") + "</div>"));
+      }
+      if ((c.orders || []).length) {
+        wrap.appendChild(node('<div class="sec">সাম্প্রতিক অর্ডার</div>'));
+        c.orders.forEach(function (o) { wrap.appendChild(node(orderCard(o))); });
+      }
+    } else if (c.type === "matrix") {
+      wrap.appendChild(node(statBox([
+        ["ডিপোজিট পেন্ডিং", (st.depCount == null ? "-" : st.depCount) + " টি"],
+        ["ডিপোজিটের মোট", bdt(st.depAmount)],
+        ["উইথড্র পেন্ডিং", (st.wdCount == null ? "-" : st.wdCount) + " টি"],
+        ["উইথড্রের মোট", bdt(st.wdAmount)],
+        ["মোট ইউজার", st.users == null ? "-" : st.users]
+      ])));
+      if ((c.deposits || []).length) {
+        wrap.appendChild(node('<div class="sec">পেন্ডিং ডিপোজিট</div>'));
+        c.deposits.forEach(function (d) { wrap.appendChild(node(depositCard(d))); });
+      }
+      if ((c.withdrawals || []).length) {
+        wrap.appendChild(node('<div class="sec">পেন্ডিং উইথড্র</div>'));
+        c.withdrawals.forEach(function (w) { wrap.appendChild(node(withdrawCard(w))); });
+      }
+    }
+  });
+  return wrap;
+}
+
+function scrollDown() { chat.scrollTop = chat.scrollHeight; }
+function removeWelcome() { var w = document.getElementById("welcome"); if (w) w.remove(); }
 
 function showWelcome() {
-  const w = document.createElement("div");
+  var w = document.createElement("div");
   w.id = "welcome";
   w.innerHTML =
-    '<div class="big">' + logo(84, "w") + '</div>' +
+    '<div class="big">' + logo(84, "w") + "</div>" +
     '<h1 class="grad">স্বাগতম! আমি আপনার RS Assistant</h1>' +
-    '<p>আজ আপনাকে কীভাবে সাহায্য করতে পারি?</p>' +
-    '<div class="cards"></div>';
-  const box = w.querySelector(".cards");
+    "<p>আজ আপনাকে কীভাবে সাহায্য করতে পারি?</p>" +
+    '<div class="wcards"></div>';
+  var box = w.querySelector(".wcards");
   SITES.forEach(function (s) {
-    const b = document.createElement("button");
-    b.className = "card";
+    var b = document.createElement("button");
+    b.className = "wcard";
     b.innerHTML = '<span class="ic">' + s.icon + '</span><span><div class="nm">' + s.name +
       '</div><div class="ds">' + s.desc + '</div></span><span class="ar">›</span>';
-    b.onclick = function () { send(s.q); };
+    b.onclick = function () { send(s.q, s.label); };
     box.appendChild(b);
   });
   chat.appendChild(w);
 }
 
-function add(role, text) {
+function add(role, text, cards) {
   removeWelcome();
-  const row = document.createElement("div");
+  var n = msgN++;
+  var row = document.createElement("div");
   row.className = "row " + (role === "user" ? "user" : "bot");
-  const bubble = document.createElement("div");
+  row.style.setProperty("--ac", PALETTE[n % PALETTE.length].join(","));
+  var col = document.createElement("div");
+  col.className = "col";
+  var bubble = document.createElement("div");
   bubble.className = "bubble";
   if (role === "user") {
     bubble.textContent = text;
-    row.appendChild(bubble);
+    col.appendChild(bubble);
+    row.appendChild(col);
   } else {
-    const av = document.createElement("div");
+    var av = document.createElement("div");
     av.className = "av";
     av.textContent = "RS";
     bubble.innerHTML = fmt(text);
+    col.appendChild(bubble);
+    if (cards && cards.length) col.appendChild(renderCards(cards));
     row.appendChild(av);
-    row.appendChild(bubble);
+    row.appendChild(col);
   }
   chat.appendChild(row);
   scrollDown();
-  return bubble;
+  return { bubble: bubble, col: col };
 }
 
 function addTyping() {
-  const b = add("model", "");
-  b.innerHTML = '<div class="typing"><div class="dots"><span></span><span></span><span></span></div><span class="lbl">ভাবছি...</span></div>';
+  var w = add("model", "");
+  w.bubble.innerHTML = '<div class="typing"><div class="dots"><span></span><span></span><span></span></div><span class="lbl">ভাবছি...</span></div>';
   scrollDown();
-  return b;
+  return w;
 }
 
 function speak(text, done) {
   if (!window.speechSynthesis) { if (done) done(); return; }
   window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
+  var u = new SpeechSynthesisUtterance(text.replace(/[*#`_]/g, ""));
   u.lang = "bn-BD";
   u.onend = function () { if (done) done(); };
   u.onerror = function () { if (done) done(); };
@@ -257,43 +434,44 @@ function listen() {
   }
 }
 
-async function send(override) {
+async function send(override, label) {
   if (busy) return;
-  const text = (typeof override === "string" ? override : input.value).trim();
+  var text = (typeof override === "string" ? override : input.value).trim();
   if (!text) return;
   input.value = "";
   busy = true;
-  add("user", text);
-  history.push({ role: "user", text: text });
-  const wait = addTyping();
+  add("user", label || text);
+  history.push({ role: "user", text: text, show: label || "" });
+  var w = addTyping();
 
-  let pass = "";
+  var pass = "";
   try { pass = localStorage.getItem("pass") || ""; } catch (e) {}
 
   try {
-    const r = await fetch("/api/chat", {
+    var r = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-app-password": pass },
-      body: JSON.stringify({ messages: history })
+      body: JSON.stringify({ messages: history.map(function (m) { return { role: m.role, text: m.text }; }) })
     });
-    const data = await r.json();
+    var data = await r.json();
     if (r.status === 401) {
-      const p = prompt("পাসওয়ার্ড দিন:");
+      var p = prompt("পাসওয়ার্ড দিন:");
       try { localStorage.setItem("pass", p || ""); } catch (e) {}
-      wait.innerHTML = "পাসওয়ার্ড দিয়েছেন, আবার পাঠান।";
+      w.bubble.innerHTML = "পাসওয়ার্ড দিয়েছেন, আবার পাঠান।";
       history.pop();
     } else if (data.error) {
-      wait.classList.add("err");
-      wait.textContent = "ত্রুটি: " + data.error;
+      w.bubble.classList.add("err");
+      w.bubble.textContent = "ত্রুটি: " + data.error;
       history.pop();
     } else {
-      wait.innerHTML = fmt(data.reply);
-      history.push({ role: "model", text: data.reply });
+      w.bubble.innerHTML = fmt(data.reply);
+      if (data.cards && data.cards.length) w.col.appendChild(renderCards(data.cards));
+      history.push({ role: "model", text: data.reply, cards: data.cards || [] });
       if (voiceOn) speak(data.reply, function () { if (voiceOn) listen(); });
     }
   } catch (e) {
-    wait.classList.add("err");
-    wait.textContent = "ইন্টারনেট বা সার্ভারে সমস্যা।";
+    w.bubble.classList.add("err");
+    w.bubble.textContent = "ইন্টারনেট বা সার্ভারে সমস্যা।";
     history.pop();
   }
   busy = false;
@@ -308,19 +486,20 @@ document.getElementById("clear").onclick = function () {
   history = [];
   save();
   chat.innerHTML = "";
+  msgN = 0;
   showWelcome();
   if (window.speechSynthesis) window.speechSynthesis.cancel();
 };
 
 SITES.forEach(function (s) {
-  const c = document.createElement("button");
+  var c = document.createElement("button");
   c.className = "chip";
   c.innerHTML = "<span>" + s.icon + "</span>" + s.name;
-  c.onclick = function () { send(s.q); };
+  c.onclick = function () { send(s.q, s.label); };
   chipsBox.appendChild(c);
 });
 
-const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (!SR) {
   mic.style.display = "none";
   voiceBtn.style.display = "none";
@@ -350,7 +529,7 @@ voiceBtn.onclick = function () {
 };
 
 if (history.length) {
-  history.forEach(function (m) { add(m.role, m.text); });
+  history.forEach(function (m) { add(m.role, m.show || m.text, m.cards); });
 } else {
   showWelcome();
 }
